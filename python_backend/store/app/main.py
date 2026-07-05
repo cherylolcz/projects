@@ -1,0 +1,13 @@
+from fastapi import FastAPI
+from app.routers import categories, products
+from app.database import engine, Base
+
+app = FastAPI(
+    version="0.0.1",
+    description="Интернет магазин",
+)
+
+app.include_router(categories.router)
+app.include_router(products.router)
+
+Base.metadata.create_all(engine)
