@@ -1,6 +1,37 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
 from decimal import Decimal
+
+
+# PYDANTIC МОДЕЛИ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ
+class UserBase(BaseModel):
+    email: EmailStr = Field(
+        description="Email пользователя"
+    )
+    role: str = Field(
+        default='buyer',
+        pattern='^(buyer|seller)$',
+        description="Роль: 'buyer' или 'seller'",
+    )
+
+
+class UserCreate(UserBase):
+    password: str = Field(
+        min_length=8,
+        description="Пароль (минимум 8 символов)",
+    )
+
+
+class User(UserBase):
+    id: int = Field(
+        description="Уникальный идентификатор пользователя",
+    )
+    is_active: bool = Field(
+        default=True,
+        description="Активность пользователя",
+    )
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # PYDANTIC МОДЕЛИ ДЛЯ КАТЕГОРИИ
