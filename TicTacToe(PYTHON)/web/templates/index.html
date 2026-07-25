@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Крестики-нолики</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: #fff;
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .status {
+            font-size: 18px;
+            margin: 20px 0;
+            padding: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>❌ Крестики-нолики ⭕</h1>
+
+    <div class="board" id="board"></div>
+
+    <div class="status" id="status">Новая игра</div>
+
+    <button onclick="newGame()">Новая игра</button>
+</div>
+
+<script>
+    let currentGameId = null;
+
+    async function newGame() {
+        const response = await fetch('/game/new', {
+            method: 'POST'
+        });
+
+        const game = await response.json();
+
+        currentGameId = game.game_id;
+        renderBoard(game.board);
+        updateStatus(game);
+    }
+
+    async function makeMove(row, col) {
+        if (!currentGameId) return;
+
+        try {
+            const response = await fetch(`/game/${currentGameId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ row: row, col: col })
+            });
+
+            if (!response.ok) {
+                throw new Error("Ошибка хода");
+            }
+
+            const updatedGame = await response.json();
+
+            renderBoard(updatedGame.board);
+            updateStatus(updatedGame);
+
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    function renderBoard(board) {
+        function getSymbol(cell) {
+            switch (cell) {
+                case 1:
+                    return "❌";
+                case -1:
+                    return "⭕";
+                default:
+                    return "";
+            }
+        }
+
+        const html = board.map((row, rowIndex) =>
+            row.map((cell, colIndex) =>
+                `<div class="cell" onclick="makeMove(${rowIndex}, ${colIndex})">
+                    ${getSymbol(cell)}
+                </div>`
+            ).join('')
+        ).join('');
+
+        document.getElementById("board").innerHTML = html;
+    }
+
+    function updateStatus(game) {
+        const status = document.getElementById("status");
+
+        if (game.is_game_over) {
+            if (game.winner === 1) {
+                status.innerHTML = "🏆 Вы победили!";
+            } else if (game.winner === -1) {
+                status.innerHTML = "💻 Компьютер победил!";
+            } else {
+                status.innerHTML = "🤝 Ничья!";
+            }
+        } else {
+            if (game.current_player === 1) {
+                status.innerHTML = "❌ Ваш ход";
+            } else {
+                status.innerHTML = "⭕ Ход компьютера";
+            }
+        }
+    }
+
+    newGame();
+</script>
+
+</body>
+</html>

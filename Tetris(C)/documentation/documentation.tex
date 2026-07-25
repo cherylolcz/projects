@@ -1,0 +1,274 @@
+\documentclass[a4paper, 12pt]{report}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english, russian]{babel}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\setlist[itemize]{label=\textcolor{black}{\textbf{\textendash}}, itemsep=10pt}
+
+\author{Чахкиев Руслан}
+\title{Тех.Документация BrickGame v1.0 aka Tetris}
+\date{9 ноября 2025 г.}
+
+\begin{document}
+
+\maketitle
+\tableofcontents{}
+
+\clearpage
+% =====НОВАЯ ГЛАВА=====
+\chapter{Общие сведения}
+
+\begin{itemize}
+    \item \textbf{Название проекта:} BrickGame v1.0
+    \item \textbf{Назначение:} Консольная игра «Тетрис» с управлением с помощью клавиатуры
+    \item \textbf{Платформа:} Linux (через терминал)
+    \item \textbf{Разработчик:} Чахкиев Руслан
+    \item \textbf{Версия:} 1.0
+\end{itemize}
+
+\clearpage
+% ======НОВАЯ ГЛАВА=====
+\chapter{Цель и Задачи}
+
+\section{Цель}
+Реализовать классическую игру "Тетрис" в консоли.
+
+\section{Основные задачи}
+\begin{itemize}[label=\textcolor{black}{\textbf{\textendash}}]
+    \item Реализовать падение фигур с определённой периодичностью
+    \item Движение фигуры вправо, влево, вниз во время игры
+    \item Вращение фигуры на 90 градусов по часовой стрелке
+    \item Подсчет уровня и очков
+    \item Система рекорда, который будет храниться в отдельном файле
+    \item Отображение текущего состояния игры
+\end{itemize}
+
+\clearpage
+% =====НОВАЯ ГЛАВА=====
+\chapter {Структура программы}
+
+\section{Архитектура программы}
+Программа реализована в соответствии с паттерном \textbf{MVC (Model View Controller)}.
+То есть, программа разделенна на 
+\begin{itemize}
+    \item \textbf{Бекэнд(Логика игры):} brick\_game/tetris
+    \item \textbf{Контроллер(Ввод клавиши и.т.п):} brick\_game/tetris/controller
+    \item \textbf{Фронтенд/(Отрисовка):} gui/cli
+\end{itemize}
+
+А также в программе присутствует система \textbf{КА (Конечных Автоматов)}.\\
+То есть, в зависимости от введённой пользователем клавиши, устанавливается определённое действие.\\
+В зависимости от действия, устанавливается определённое состояние\\
+
+\clearpage
+\section{Структура программы}
+
+\begin{itemize}
+    \item \textbf{brick\_game}
+    \begin{itemize}
+        \item \textbf{tetris}
+        \begin{itemize}
+            \item \textbf{controller}
+            \begin{itemize}
+                \item s21\_tetris\_controller.c
+                \item s21\_tetris\_controller.h
+            \end{itemize}
+            \item s21\_back\_field\_actions.c
+            \item s21\_back\_figure\_actions.c
+            \item s21\_back\_game\_info.c
+            \item s21\_back\_init.c
+            \item s21\_back\_matrix\_actions.c
+            \item s21\_backend.h
+        \end{itemize}
+    \end{itemize}
+    
+    \item \textbf{gui}
+    \begin{itemize}
+        \item \textbf{cli}
+        \begin{itemize}
+            \item s21\_front\_init\_funcs.c
+            \item s21\_front\_print\_actions.c
+            \item s21\_frontend.c
+            \item s21\_frontend.h
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\begin{verbatim}
+Взаимодействие:
+Главный цикл -> Обновление логики -> Перерисовка экрана -> Ввод
+Цикл         -> Бекэнд            -> Фронтенд           -> Контроллер
+\end{verbatim}
+
+\clearpage
+% =====НОВАЯ ГЛАВА=====
+\chapter{Основные алгоритмы}
+
+\begin{itemize}
+    \item Падение фигуры: Каждые N миллисекунд сдвиг вниз.
+    \item Поворот фигуры на 90 градусов.
+    \item Проверка столкновений: Если фигура достигла дна или натыкается на следующую фигуру, то генерируется новая фигура.
+    \item Удаление линий: Если строка полностью заполнена, строка очищается, и все линии поля сдвигаются вниз на 1 клетку.
+    \item Подсчёт очков: 100 за одну удалённую линию, 300 - за две, 700 - за три, 1500 - за четыре.
+    \item Генерация фигур: случайным образом из 7 типов.
+    \item Отображение и сохранение рекордов в файле \textbf{record.bin}.
+\end{itemize}
+
+\clearpage
+% =====НОВАЯ ГЛАВА=====
+\chapter{Основные структуры данных}
+
+\section{Основная структура \texttt{GameData\_t}}
+
+Хранит в себе \textbf{все} данные об игре
+\begin{verbatim}
+    typedef struct {
+        int **figure[FIGURE_COUNT];
+        Figure_t fig_cur;
+        Figure_t fig_next;
+        GameInfo_t g_i;
+        GameState_t g_s;
+        UserAction_t g_a;
+    } GameData_t;
+\end{verbatim}
+
+\section{Структура \texttt{GameInfo\_t}}
+
+Хранит в себе параметры об игре (Текущий счет, рекорд и.т.п)
+\begin{verbatim}
+    typedef struct {
+        int **field;
+        int **next;
+        int score;
+        int high_score;
+        int level;
+        int speed;
+        int pause;
+    } GameInfo_t;
+\end{verbatim}
+
+\section{Структура \texttt{FIgure\_t}}
+
+Хранит в себе информацию о текущей и следующей фигуре
+\begin{verbatim}
+    typedef struct {
+        int **shape;
+        int type;
+        f_cords cord;
+    } Figure_t;
+
+    typedef struct {
+        int y, x;
+    } f_cords;
+\end{verbatim}
+
+\section{Структура \texttt{GameAction\_t}}
+
+Хранит в себе информацию о текущем действии
+\begin{verbatim}
+    typedef enum {
+        Start,
+        Pause,
+        Terminate,
+        Left,
+        Right,
+        Up,
+        Down,
+        Action,
+        Drop,
+        Nothing
+    } UserAction_t;
+\end{verbatim}
+
+\section{Структура \texttt{GameState\_t}}
+
+Хранит в себе информацию о текущем состоянии
+\begin{verbatim}
+    typedef enum {
+        STATE_MENU,
+        STATE_PLAYING,
+        STATE_PAUSE,
+        STATE_GAME_OVER,
+        STATE_EXIT
+    } GameState_t;
+\end{verbatim}
+
+\clearpage
+% =====НОВАЯ ГЛАВА=====
+\chapter{Интерфейс}
+
+\begin{itemize}
+    \item Управление с клавиатуры.
+    \begin{itemize}
+        \item ← / → — Перемещение фигуры
+        \item ↓     — Ускорение
+        \item ↑     — Поворот
+        \item R     — Начать игру
+        \item Q     — Выход
+        \item P     — Пауза
+        \item SPACE — Дроп
+    \end{itemize}
+    \item Игровое поле отображается в терминале.
+    \item Очки и уровень выводятся сбоку.
+\end{itemize}
+
+\clearpage
+% =====НОВАЯ ГЛАВА=====
+\chapter{Инструкция по запуску}
+
+\section{Инструменты, необходимые для сборки}
+Требуются две \textbf{сторонние} библиотеки
+\begin{itemize}
+    \item \textbf{ncurses.h} (Библиотека, для работы с графикой в терминале)
+    \item \textbf{check.h} (Библиотека, для запуска тестирования)
+    \item \textbf{Tex Live} (Дистрибутив для компиляции из \textbf{.tex} в \textbf{.pdf})
+\end{itemize}
+
+\section{Скачивание инструментов, необходимых для сборки}
+Чтобы их скачать, в терминале нужно ввести\\
+sudo apt install check \textbf{(Для check.h)}\\
+sudo apt install libncurses5-dev libncursesw5-dev \textbf{(Для ncurses.h)}\\
+sudo apt install texlive-full \textbf{(Для Tex Live)}\\
+Также для компиляции из \textbf{.tex} в \textbf{.pdf} можно использовать онлайн-сервисы, например \textbf{"Overleaf"}\\
+"https://ru.overleaf.com/project"
+
+\clearpage
+% =====НОВАЯ ГЛАВА=====
+\chapter{Цели в Makefile}
+
+\begin{itemize}
+    \item \textbf{all}
+        Собирает исполняемый файл для игры в Тетрис.
+    \item \textbf{test}
+        Собирает исполняемый файл для запуска тестов.
+    \item \textbf{dvi}
+        Компилирует документацию из \textbf{.tex} в \textbf{.pdf}.
+    \item \textbf{dist}
+        Создаёт архив с файлами, необходимыми для сборки исполняемого файла для игры в Тетрис.
+    \item \textbf{gcov\_report}
+        Генерирует html страницу, в которой указано сколько \textbf{строк} и \textbf{функций} были покрыты тестами.
+    \item \textbf{install}
+        Копирует исполняемый файл для игры в Тетрис в папку \textbf{BrickGame v1.0 aka Tetris}.
+    \item \textbf{uninstall}
+        Удаляет исполняемый файл для игры в Тетрис из папки \textbf{BrickGame v1.0 aka Tetris}.
+    \item \textbf{clang\_check} и \textbf{clang\_fix}
+        Проверяет соответствие написание кода с GoogleStyle и соответственно фиксит несоответствие.
+    \item \textbf{leak\_game} и \textbf{leak\_test}
+        Проверяет на утечку памяти игру и тесты.
+    \item \textbf{clean}
+        Очищает всё, кроме файлов, необходимых для сборки проекта.
+\end{itemize}
+
+\clearpage
+% =====НОВАЯ ГЛАВА=====
+\chapter{Заключение}
+
+\begin{verbatim}
+Проект реализует основные механики классического Тетриса.
+Программа работает стабильно, код модульный и легко расширяемый.
+\end{verbatim}
+
+\end{document}
