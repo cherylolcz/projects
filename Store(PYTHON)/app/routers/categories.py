@@ -15,6 +15,7 @@ from .routers_depends import (
     check_category,
 )
 
+
 router = APIRouter(
     prefix="/categories",
     tags=["categories"],

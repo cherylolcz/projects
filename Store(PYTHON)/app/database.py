@@ -1,12 +1,12 @@
-# АСИНХРОННОЕ ПОДКЛЮЧЕНИЕ
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-DATABASE_URL = "postgresql+asyncpg://eccomerce_user:0104@localhost:5432/eccomerce_db"
+DATABASE_URL = "sqlite+aiosqlite:///ecommerce.db"
 async_engine = create_async_engine(DATABASE_URL, echo=True)
-
 async_session = async_sessionmaker(
-    async_engine, expire_on_commit=False, class_=AsyncSession
+    bind=async_engine,
+    expire_on_commit=False,
+    class_=AsyncSession,
 )
 
 

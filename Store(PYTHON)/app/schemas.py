@@ -1,16 +1,58 @@
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
 from decimal import Decimal
+from datetime import datetime
+
+
+# PYDANTIC МОДЕЛЬ ДЛЯ ОТЗЫВОВ
+class ReviewBase(BaseModel):
+    comment: str | None = Field(
+        default=None,
+        max_length=500,
+    )
+    grade: int = Field(
+        le=5,
+        ge=1,
+    )
+
+
+class ReviewCreate(ReviewBase):
+    product_id: int = Field(
+        ...,
+        description="ID товара, к которому пишется отзыв"
+    )
+
+
+class Review(ReviewBase):
+    id: int = Field(
+        ...,
+        description="Уникальный идентификатор отзыва."
+    )
+    is_active: bool = Field(
+        default=True,
+    )
+    comment_date: datetime = Field(
+        default_factory=datetime.now,
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# PYDANTIC МОДЕЛЬ ДЛЯ ОБНОВЛЕНИЯ REFRESH И ACCSES ТОКЕНА
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class AccessTokenRequest(BaseModel):
+    access_token: str
 
 
 # PYDANTIC МОДЕЛИ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ
 class UserBase(BaseModel):
-    email: EmailStr = Field(
-        description="Email пользователя"
-    )
+    email: EmailStr = Field(description="Email пользователя")
     role: str = Field(
-        default='buyer',
-        pattern='^(buyer|seller)$',
+        default="buyer",
+        pattern="^(buyer|seller)$",
         description="Роль: 'buyer' или 'seller'",
     )
 

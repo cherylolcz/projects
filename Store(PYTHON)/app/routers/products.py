@@ -95,7 +95,7 @@ async def update_product(
 ):
     if new_product_model.user_id != current_user.id:
         raise HTTPException(
-            detail='You can update only your own products',
+            detail="You can update only your own products",
             status_code=status.HTTP_403_FORBIDDEN,
         )
 
@@ -119,7 +119,7 @@ async def delete_category(
 ):
     if product.user_id != current_user.id:
         raise HTTPException(
-            detail='You can update only your own products',
+            detail="You can update only your own products",
             status_code=status.HTTP_403_FORBIDDEN,
         )
 

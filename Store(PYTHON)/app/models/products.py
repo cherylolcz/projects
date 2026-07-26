@@ -5,6 +5,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from decimal import Decimal
 
+from typing import List
+
 
 class Product(Base):
     __tablename__ = "products"
@@ -12,6 +14,16 @@ class Product(Base):
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
+    )
+    category_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("categories.id"),
+        nullable=False,
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
     )
     name: Mapped[str] = mapped_column(
         String(100),
@@ -35,22 +47,10 @@ class Product(Base):
         Boolean,
         default=True,
     )
-    category_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("categories.id"),
-        nullable=False,
-    )
-    user_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-    )
 
     category: Mapped["Category"] = relationship(
         "Category",
         back_populates="products",
     )
-    seller: Mapped["User"] = relationship(
-        "User",
-        back_populates="products"
-    )
+    seller: Mapped["User"] = relationship("User", back_populates="products")
+    reviews: Mapped[List["Review"]] = relationship("Review", back_populates="products")

@@ -1,26 +1,124 @@
+import jwt
+from app.config import SECRET_KEY, ALGORITHM
+
 from fastapi import APIRouter, status, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.schemas import UserCreate, User as UserSchema
+from app.schemas import (
+    UserCreate,
+    User as UserSchema,
+    RefreshTokenRequest,
+    AccessTokenRequest,
+)
 from app.models.users import User as UserModel
 
 from app.db_depends import get_async_db
 
-from app.auth import hash_password, verify_password, create_access_token
-
-router = APIRouter(
-    prefix='/users',
-    tags=['users'],
+from app.auth import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_refresh_token,
 )
 
-@router.post('/', status_code=status.HTTP_201_CREATED, response_model=UserSchema)
-async def create_user(
-    new_user: UserCreate,
-    db: AsyncSession = Depends(get_async_db)
+router = APIRouter(
+    prefix="/users",
+    tags=["users"],
+)
+
+
+@router.post("/access-token")
+async def access_token(
+    body: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_async_db),
 ):
+    credential_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validatae refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    refresh_token = body.refresh_token
+
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, ALGORITHM)
+        email: str | None = payload.get("sub")
+        token_type: str | None = payload.get("token_type")
+
+        if email is None or token_type != "refresh":
+            raise credential_exception
+
+    except jwt.ExpiredSignatureError:
+        raise credential_exception
+    except jwt.PyJWTError:
+        raise credential_exception
+
+    id: int = payload.get("id")
+    stmt = select(UserModel).where(UserModel.id == id, UserModel.is_active.is_(True))
+    user = (await db.scalars(stmt)).first()
+
+    if user is None:
+        raise credential_exception
+
+    new_access_token = create_access_token(
+        data={"sub": user.email, "role": user.role, "id": user.id}
+    )
+
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/refresh-token")
+async def refresh_token(
+    body: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_async_db),
+):
+    credential_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validatae refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    old_refresh_token = body.refresh_token
+
+    try:
+        payload = jwt.decode(old_refresh_token, SECRET_KEY, ALGORITHM)
+        email: str | None = payload.get("sub")
+        token_type: str | None = payload.get("token_type")
+
+        if email is None or token_type != "refresh":
+            raise credential_exception
+
+    except jwt.ExpiredSignatureError:
+        raise credential_exception
+    except jwt.PyJWTError:
+        raise credential_exception
+
+    stmt = select(UserModel).where(
+        UserModel.email == email, UserModel.is_active.is_(True)
+    )
+    user = (await db.scalars(stmt)).first()
+
+    if user is None:
+        raise credential_exception
+
+    new_refresh_token = create_refresh_token(
+        data={"sub": user.email, "role": user.role, "id": user.id}
+    )
+
+    return {
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserSchema)
+async def create_user(new_user: UserCreate, db: AsyncSession = Depends(get_async_db)):
     stmt = select(UserModel).where(
         UserModel.email == new_user.email,
         UserModel.is_active.is_(True),
@@ -29,7 +127,7 @@ async def create_user(
 
     if user is not None:
         raise HTTPException(
-            detail='Email already registered',
+            detail="Email already registered",
             status_code=status.HTTP_409_CONFLICT,
         )
 
@@ -59,8 +157,18 @@ async def login(
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Incorrect email or password',
-            headers={'WWW-Authenticate': 'Bearer'},
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token = create_access_token(data={"sub": user.email, "role": user.role, "id": user.id})
-    return {"access_token": access_token, "token_type": "bearer"}
+    access_token = create_access_token(
+        data={"sub": user.email, "role": user.role, "id": user.id}
+    )
+    refresh_token = create_refresh_token(
+        data={"sub": user.email, "role": user.role, "id": user.id}
+    )
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }

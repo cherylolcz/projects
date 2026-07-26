@@ -9,10 +9,7 @@ from typing import List
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(
         String,
         nullable=False,
@@ -37,3 +34,4 @@ class User(Base):
         "Product",
         back_populates="seller",
     )
+    reviews: Mapped[List["Review"]] = relationship("Review", back_populates="user")
