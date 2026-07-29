@@ -34,4 +34,4 @@ class User(Base):
         "Product",
         back_populates="seller",
     )
-    reviews: Mapped[List["Review"]] = relationship("Review", back_populates="user")
+    reviews: Mapped[List["Review"]] = relationship("Review", back_populates="users")

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, status, Depends, HTTPException, Query
 
-from app.schemas import ProductCreate, Product as ProductSchema
+from app.schemas import ProductCreate, Product as ProductSchema, ProductList
 from app.models.products import Product as ProductModel
 from app.models.categories import Category as CategoryModel
 from app.models.users import User as UserModel
@@ -10,7 +10,7 @@ from app.auth import get_current_seller
 from app.db_depends import get_async_db
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, desc, func
 
 from typing import List
 
@@ -20,18 +20,66 @@ from .routers_depends import (
     check_product,
 )
 
+
 router = APIRouter(
     prefix="/products",
     tags=["products"],
 )
 
 
-@router.get("/", status_code=status.HTTP_200_OK, response_model=List[ProductSchema])
-async def get_products(db: AsyncSession = Depends(get_async_db)):
-    stmt = select(ProductModel).where(ProductModel.is_active == True)
-    all_products = (await db.scalars(stmt)).all()
+@router.get("/", status_code=status.HTTP_200_OK, response_model=ProductList)
+async def get_products(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    min_price: float | None = Query(
+        None, description="Минимальная цена"
+    ),
+    max_price: float | None = Query(
+        None, description="Максимальная цена цена"
+    ),
+    in_stock: int | None = Query(
+        None, description="True - товар в наличии, в ином случае - False"
+    ),
+    seller_id: int | None = Query(
+        None, description="id продавца"
+    ),
+    db: AsyncSession = Depends(get_async_db)
+):
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(
+            detail="min price > max price",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 
-    return all_products
+    filters = [ProductModel.is_active.is_(True)]
+
+    if min_price is not None:
+        filters.append(ProductModel.price >= min_price)
+    if max_price is not None:
+        filters.append(ProductModel.price <= max_price)
+    if in_stock is not None:
+        filters.append(ProductModel.stock > 0 if in_stock else ProductModel.stock == 0)
+    if seller_id is not None:
+        filters.append(ProductModel.user_id >= seller_id)
+
+    total_stmt = select(func.count()).select_from(ProductModel).where(*filters)
+    total = await db.scalar(total_stmt)
+
+    products_stmt = (
+        select(ProductModel)
+        .where(*filters)
+        .order_by(ProductModel.id)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    items = (await db.scalars(products_stmt)).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=ProductSchema)
@@ -40,7 +88,6 @@ async def create_product(
     current_user: UserModel = Depends(get_current_seller),
     db: AsyncSession = Depends(get_async_db),
 ):
-
     stmt = select(CategoryModel).where(
         CategoryModel.id == product.category_id, CategoryModel.is_active == True
     )

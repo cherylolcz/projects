@@ -31,7 +31,7 @@ class Review(Base):
         default=datetime.now,
     )
     grade: Mapped[int] = mapped_column(
-        CheckConstraint("grade >= 1 AND grade <= 5"),
+        Integer,
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(

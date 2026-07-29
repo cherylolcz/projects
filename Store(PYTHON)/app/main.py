@@ -1,10 +1,5 @@
 from fastapi import FastAPI
-from app.routers import (
-    categories,
-    products,
-    users,
-    reviews
-    )
+from app.routers import categories, products, users, reviews
 
 app = FastAPI(
     version="0.0.1",

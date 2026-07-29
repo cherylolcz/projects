@@ -11,7 +11,6 @@ from app.schemas import (
     UserCreate,
     User as UserSchema,
     RefreshTokenRequest,
-    AccessTokenRequest,
 )
 from app.models.users import User as UserModel
 
@@ -37,7 +36,7 @@ async def access_token(
 ):
     credential_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validatae refresh token",
+        detail="Could not validate refresh token",
         headers={"WWW-Authenticate": "Bearer"},
     )
 

@@ -17,17 +17,11 @@ class ReviewBase(BaseModel):
 
 
 class ReviewCreate(ReviewBase):
-    product_id: int = Field(
-        ...,
-        description="ID товара, к которому пишется отзыв"
-    )
+    product_id: int = Field(..., description="ID товара, к которому пишется отзыв")
 
 
 class Review(ReviewBase):
-    id: int = Field(
-        ...,
-        description="Уникальный идентификатор отзыва."
-    )
+    id: int = Field(..., description="Уникальный идентификатор отзыва.")
     is_active: bool = Field(
         default=True,
     )
@@ -106,6 +100,18 @@ class Category(CategoryBase):
 
 
 # PYDANTIC МОДЕЛИ ДЛЯ ПРОДУКТОВ
+class ProductList(BaseModel):
+    """
+    Список пагинации для товаров.
+    """
+    items: list[Product] = Field(description="Товары для текущей страницы")
+    total: int = Field(description="Общее количество товаров")
+    page: int = Field(description="Номер текущей страницы")
+    page_size: int = Field(description="Размер текущей страницы")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProductBase(BaseModel):
     name: str = Field(
         ...,
@@ -137,6 +143,10 @@ class ProductBase(BaseModel):
     category_id: int = Field(
         ...,
         description="ID категории",
+    )
+    rating: Decimal = Field(
+        ...,
+        description="Средний рейтинг товара"
     )
 
 

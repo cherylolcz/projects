@@ -47,6 +47,11 @@ class Product(Base):
         Boolean,
         default=True,
     )
+    rating: Mapped[Decimal] = mapped_column(
+        Numeric(3, 2),
+        default=0.0,
+        nullable=False,
+    )
 
     category: Mapped["Category"] = relationship(
         "Category",
