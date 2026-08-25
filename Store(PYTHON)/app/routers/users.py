@@ -1,5 +1,5 @@
 import jwt
-from app.config import SECRET_KEY, ALGORITHM
+from app.config import settings
 
 from fastapi import APIRouter, status, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
@@ -7,14 +7,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.schemas import (
-    UserCreate,
-    User as UserSchema,
-    RefreshTokenRequest,
-)
-from app.models.users import User as UserModel
+from app.schemas import UserCreate, UserRead, RefreshTokenRequest
+from app.models.users import User
 
-from app.db_depends import get_async_db
+from app.depends.db import get_db
 
 from app.auth import (
     hash_password,
@@ -32,7 +28,7 @@ router = APIRouter(
 @router.post("/access-token")
 async def access_token(
     body: RefreshTokenRequest,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db),
 ):
     credential_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -43,7 +39,7 @@ async def access_token(
     refresh_token = body.refresh_token
 
     try:
-        payload = jwt.decode(refresh_token, SECRET_KEY, ALGORITHM)
+        payload = jwt.decode(refresh_token, settings.secret_key, settings.algorithm)
         email: str | None = payload.get("sub")
         token_type: str | None = payload.get("token_type")
 
@@ -56,7 +52,7 @@ async def access_token(
         raise credential_exception
 
     id: int = payload.get("id")
-    stmt = select(UserModel).where(UserModel.id == id, UserModel.is_active.is_(True))
+    stmt = select(User).where(User.id == id, User.is_active.is_(True))
     user = (await db.scalars(stmt)).first()
 
     if user is None:
@@ -75,18 +71,18 @@ async def access_token(
 @router.post("/refresh-token")
 async def refresh_token(
     body: RefreshTokenRequest,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db),
 ):
     credential_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validatae refresh token",
+        detail="Could not validate refresh token",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
     old_refresh_token = body.refresh_token
 
     try:
-        payload = jwt.decode(old_refresh_token, SECRET_KEY, ALGORITHM)
+        payload = jwt.decode(old_refresh_token, settings.secret_key, settings.algorithm)
         email: str | None = payload.get("sub")
         token_type: str | None = payload.get("token_type")
 
@@ -98,9 +94,7 @@ async def refresh_token(
     except jwt.PyJWTError:
         raise credential_exception
 
-    stmt = select(UserModel).where(
-        UserModel.email == email, UserModel.is_active.is_(True)
-    )
+    stmt = select(User).where(User.email == email, User.is_active.is_(True))
     user = (await db.scalars(stmt)).first()
 
     if user is None:
@@ -116,11 +110,11 @@ async def refresh_token(
     }
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserSchema)
-async def create_user(new_user: UserCreate, db: AsyncSession = Depends(get_async_db)):
-    stmt = select(UserModel).where(
-        UserModel.email == new_user.email,
-        UserModel.is_active.is_(True),
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserRead)
+async def create_user(new_user: UserCreate, db: AsyncSession = Depends(get_db)):
+    stmt = select(User).where(
+        User.email == new_user.email,
+        User.is_active.is_(True),
     )
     user = (await db.scalars(stmt)).first()
 
@@ -130,7 +124,7 @@ async def create_user(new_user: UserCreate, db: AsyncSession = Depends(get_async
             status_code=status.HTTP_409_CONFLICT,
         )
 
-    new_user_model = UserModel(
+    new_user_model = User(
         email=new_user.email,
         hashed_password=hash_password(new_user.password),
         role=new_user.role,
@@ -145,11 +139,11 @@ async def create_user(new_user: UserCreate, db: AsyncSession = Depends(get_async
 @router.post("/token")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(UserModel).where(
-        UserModel.email == form_data.username,
-        UserModel.is_active.is_(True),
+    stmt = select(User).where(
+        User.email == form_data.username,
+        User.is_active.is_(True),
     )
     user = (await db.scalars(stmt)).first()
 

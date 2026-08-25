@@ -1,8 +1,8 @@
-"""initial
+"""init migration
 
-Revision ID: 85a5701fd4cb
+Revision ID: b5cb1c589e20
 Revises:
-Create Date: 2026-07-27 23:51:00.875467
+Create Date: 2026-08-23 19:42:40.473850
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "85a5701fd4cb"
+revision: str = "b5cb1c589e20"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -49,10 +49,11 @@ def upgrade() -> None:
         sa.Column("category_id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=100), nullable=False),
-        sa.Column("description", sa.String(length=500), nullable=True),
+        sa.Column("description", sa.String(length=500), nullable=False),
         sa.Column("price", sa.Numeric(precision=10, scale=2), nullable=False),
         sa.Column("image_url", sa.String(length=200), nullable=True),
         sa.Column("stock", sa.Integer(), nullable=False),
+        sa.Column("rating", sa.Numeric(precision=3, scale=2), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
             ["category_id"],
@@ -67,8 +68,8 @@ def upgrade() -> None:
     op.create_table(
         "reviews",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("product_id", sa.Integer(), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("comment", sa.Text(), nullable=True),
         sa.Column("comment_date", sa.DateTime(), nullable=False),
         sa.Column("grade", sa.Integer(), nullable=False),

@@ -1,13 +1,11 @@
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-DATABASE_URL = "sqlite+aiosqlite:///ecommerce.db"
-async_engine = create_async_engine(DATABASE_URL, echo=True)
-async_session = async_sessionmaker(
-    bind=async_engine,
-    expire_on_commit=False,
-    class_=AsyncSession,
-)
+from app.config import settings
+
+engine = create_async_engine(settings.database_url, echo=True)
+
+async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
